@@ -24,7 +24,7 @@ void TestManager::testInput(string & rInput) // Uses the current directory to lo
 	saAttr.bInheritHandle = TRUE;
 	saAttr.lpSecurityDescriptor = NULL;
 
-	hChild_Named_Std_OUT = CreateNamedPipeA("\\.\\pipe\\childout", PIPE_ACCESS_OUTBOUND, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, BUFSIZE, BUFSIZE, 100, &saAttr);
+	hChild_Named_Std_OUT = CreateNamedPipeA("\\\\.\\pipe\\childout", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, BUFSIZE, BUFSIZE, 100, &saAttr);
 	
 
 	// Create a pipe for the child process's STDOUT.
@@ -345,10 +345,21 @@ void TestManager::WriteToPipe(const string & rInput)
 
 void TestManager::ReadFromPipe()
 {
-	DWORD dwRead, dwWritten;
+	DWORD dwRead = 0, dwWritten;
 	CHAR chBuf[BUFSIZE];
 	BOOL bSuccess = FALSE;
 	HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	OVERLAPPED ol;
+	ZeroMemory(&ol, sizeof(OVERLAPPED));
+
+	HANDLE hChild_out_rd = CreateFileA("\\\\.\\pipe\\childout", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+	//ol.hEvent = hChild_Named_Std_OUT;
+	//ol.Internal = NULL;
+	//ol.InternalHigh = NULL;
+	//ol.Offset = 0;
+	//ol.OffsetHigh = 0;
+	//ol.Pointer = 0;
+	//ol.hEvent = hChild_Named_Std_OUT;
 	/*COMMTIMEOUTS stdoutCT; // Should be set via my createnamedpipe call.
 	stdoutCT.ReadIntervalTimeout = 1;
 	stdoutCT.ReadTotalTimeoutConstant = 1;
@@ -366,17 +377,26 @@ void TestManager::ReadFromPipe()
 	}*/
 		
 
-
+	//bool firstRead = false;
+	system("pause");
 	for (;;)
 	{
 		//bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
-		bSuccess = ReadFile(hChild_Named_Std_OUT, chBuf, BUFSIZE, &dwRead, NULL);
-		if (!bSuccess || dwRead == 0)
+		//do {
+			bSuccess = ReadFile(hChild_out_rd, chBuf, BUFSIZE, &dwRead, &ol);
+
+		//} while ((dwRead == 0) && (GetLastError() == 997));
+		/*if (!bSuccess)
 		{
-			CloseHandle(g_hChildStd_OUT_Rd);
+			ErrorExit(TEXT("ReadFile"));
+		}*/
+		if (/*firstRead &&*/ (!bSuccess || dwRead == 0))
+		{
+			//ErrorExit(TEXT("ReadFIle"));
+			CloseHandle(hChild_out_rd);
 			break;
 		}
-		else {
+		/*else {
 
 			switch (GetLastError())
 			{
@@ -389,11 +409,13 @@ void TestManager::ReadFromPipe()
 			default:
 				break;
 			}
-		}
+		}*/
 
 		bSuccess = WriteFile(hParentStdOut, chBuf,
 			dwRead, &dwWritten, NULL);
-		if (!bSuccess) break;
+		if (!bSuccess) { break; }
+		//else if (dwWritten > 0) { firstRead = true; }
+		
 	}
 	cout << GetLastError() << endl;
 }
