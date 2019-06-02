@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{407ACC53-C52F-4932-B66A-69D007DFEFBD}</ProjectGuid>
+    <ProjectGuid>{2C2A64D1-A2C4-49D5-B625-0C552123D522}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>tatoo</RootNamespace>
+    <RootNamespace>PA7</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -142,21 +142,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="input.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="test_manager.cpp" />
-    <ClCompile Include="text_ui.cpp" />
-    <ClCompile Include="Traverser.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="input.h" />
-    <ClInclude Include="text_ui.h" />
-    <ClInclude Include="test_manager.h" />
-    <ClInclude Include="Traverser.h" />
+    <ClInclude Include="List.h" />
+    <ClInclude Include="Menu.h" />
+    <ClInclude Include="Node.h" />
+    <ClInclude Include="Record.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="Stack.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="settings.txt" />
-    <Text Include="test.txt" />
+    <Text Include="master.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="classList.csv" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

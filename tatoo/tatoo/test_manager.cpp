@@ -6,11 +6,32 @@ TestManager::TestManager(const string inputName, const string dirName, const str
 	traverser = Traverser(dirName);
 	pInput = getTestInputs(inputName);
 	speed = speedMode;
+	forceCompile = false;
 }
 
 void TestManager::testAllProjects()
 {
-
+	string* curDir;
+	auto back = str_to_lpctstr("..\\..\\");
+	while (traverser.getNextPathName(curDir))
+	{
+		testProject(*curDir);
+		changeCurDir(back);
+	}
+}
+void TestManager::testProject(const string & rPathName)
+{
+	auto dirName = str_to_lpctstr(rPathName);
+ 	bool cd = changeCurDir(dirName);
+	if (cd)
+	{
+		compileProject("", "g++ -std=c++17 -static-libgcc -static-libstdc++ -o proj .\\*.cpp");
+		testAllInputs();
+	}
+	else
+	{
+		cout << "Error at " << rPathName << endl;
+	}
 }
 
 void testProject(const string & rPathName);
@@ -24,8 +45,13 @@ void TestManager::testInput(string & rInput) // Uses the current directory to lo
 	saAttr.bInheritHandle = TRUE;
 	saAttr.lpSecurityDescriptor = NULL;
 
-	hChild_Named_Std_OUT = CreateNamedPipeA("\\\\.\\pipe\\childout", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, BUFSIZE, BUFSIZE, 100, &saAttr);
-	
+	hChild_Named_Std_OUT = CreateNamedPipeA("\\\\.\\pipe\\childout", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, BUFSIZE, BUFSIZE, 10, &saAttr);
+	//if (temp != INVALID_HANDLE_VALUE)
+	//{
+	//	//ErrorExit(TEXT("CreateNamedPipeA"));
+	//	//ConnectNamedPipe()
+	//	hChild_Named_Std_OUT = temp;
+	//}
 
 	// Create a pipe for the child process's STDOUT.
 	if (!CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0))
@@ -44,16 +70,38 @@ void TestManager::testInput(string & rInput) // Uses the current directory to lo
 	}
 
 	//CreateChildProcess
-	CreateChildProcess();
+	CreateChildProcess(); // Make it take a parameter instead of a private member
 
 	WriteToPipe(rInput);
 	cout << "Input: " << rInput << endl;
 
 	cout << "==============" << endl << "Output: " << endl;
 	ReadFromPipe();
+
+	DisconnectNamedPipe(hChild_Named_Std_OUT);
+	CloseHandle(g_hChildStd_IN_Rd);
+	CloseHandle(g_hChildStd_IN_Wr);
+	CloseHandle(g_hChildStd_OUT_Rd);
+	CloseHandle(g_hChildStd_OUT_Wr);
+	CloseHandle(hChild_Named_Std_OUT);
 }
 
-void testAllInputs(const string & rPathName);
+void TestManager::testAllInputs()
+{
+	for (auto testString : *pInput)
+	{
+		testInput(testString);
+	}
+}
+
+bool TestManager::projectCompiled()
+{
+	LPCTSTR fileName = str_to_lpctstr("C:" + defaultExeName + ".exe");
+
+	DWORD dwAttrib = GetFileAttributes(fileName);
+
+	return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
 
 void TestManager::compileProject(const string & codeDir, const string & comLine)
 {
@@ -79,11 +127,18 @@ void TestManager::compileProject(const string & codeDir, const string & comLine)
 	auto lpCurDir = str_to_lpctstr(codeDir);
 	auto lpComLine = str_to_lpwstr(comLine);
 
-	bool cd = changeCurDir(lpCurDir);
-	if (cd)
+	//bool cd = changeCurDir(lpCurDir);
+	if (1)
 	{
-		cout << "Compiling project..." << endl;
-		my_createProcess(lpComLine);
+		if (!projectCompiled() || forceCompile)
+		{
+			cout << "Compiling project..." << endl;
+			my_createProcess(lpComLine);
+		}
+		else
+		{
+			cout << "Using compiled project." << endl;
+		}
 	}
 	else
 	{
@@ -243,8 +298,8 @@ void TestManager::printLastError_t(LPCTSTR & rCom)
 	std::wcout << (TEXT("::executeCommandLine() failed at CreateProcess()\nCommand=%s\nMessage=%s\n\n"), rCom, strError) << endl;
 
 	// Free resources created by the system
-	//LocalFree(lpMsgBuf);
-	delete[] lpMsgBuf;
+	LocalFree(lpMsgBuf);
+	//delete[] lpMsgBuf;
 }
 
 void TestManager::printLastError_w(LPWSTR &rCom)
@@ -306,17 +361,21 @@ void TestManager::CreateChildProcess()
 	siStartInfo.hStdInput = g_hChildStd_IN_Rd;
 	siStartInfo.dwFlags |= STARTF_USESTDHANDLES; //  | PIPE_WAIT
 
-	bSuccess = CreateProcess(NULL,
-		szCmdline, // command line
-		NULL,		// process security attributes
-		NULL,		// primary thread security attributes
-		TRUE,		// handles are inherited
-		CREATE_NEW_CONSOLE,			// creation flags
-		NULL,		// use parent's enviroinment
-		NULL,		// use parent' current directory
-		&siStartInfo,
-		&piProcInfo);
+	do {
+		bSuccess = CreateProcess(NULL,
+			szCmdline, // command line
+			NULL,		// process security attributes
+			NULL,		// primary thread security attributes
+			TRUE,		// handles are inherited
+			CREATE_NO_WINDOW,			// creation flags
+			NULL,		// use parent's enviroinment
+			NULL,		// use parent' current directory
+			&siStartInfo,
+			&piProcInfo);
 
+		if (GetLastError() != 32)
+			break;
+	} while (!bSuccess);
 	if (!bSuccess)
 	{
 		ErrorExit(TEXT("CreateProcess"));
@@ -345,7 +404,7 @@ void TestManager::WriteToPipe(const string & rInput)
 
 void TestManager::ReadFromPipe()
 {
-	DWORD dwRead = 0, dwWritten;
+	DWORD dwRead, dwWritten, dwAvail;
 	CHAR chBuf[BUFSIZE];
 	BOOL bSuccess = FALSE;
 	HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -381,16 +440,18 @@ void TestManager::ReadFromPipe()
 	system("pause");
 	for (;;)
 	{
+		//bSuccess = PeekNamedPipe(hChild_out_rd, chBuf, BUFSIZE, &dwRead, &dwAvail, 0);
 		//bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
 		//do {
-			bSuccess = ReadFile(hChild_out_rd, chBuf, BUFSIZE, &dwRead, &ol);
+		bSuccess = ReadFile(hChild_out_rd, chBuf, BUFSIZE, &dwRead, &ol);
 
 		//} while ((dwRead == 0) && (GetLastError() == 997));
 		/*if (!bSuccess)
 		{
 			ErrorExit(TEXT("ReadFile"));
 		}*/
-		if (/*firstRead &&*/ (!bSuccess || dwRead == 0))
+		//if (/*firstRead &&*/ (!bSuccess || dwRead == 0))
+		if(!bSuccess || dwRead == 0)
 		{
 			//ErrorExit(TEXT("ReadFIle"));
 			CloseHandle(hChild_out_rd);
@@ -417,7 +478,8 @@ void TestManager::ReadFromPipe()
 		//else if (dwWritten > 0) { firstRead = true; }
 		
 	}
-	cout << GetLastError() << endl;
+	//cout << GetLastError() << endl;
+	//delete chBuf;
 }
 
 void TestManager::ErrorExit(PTSTR lpszFunction)

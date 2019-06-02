@@ -3,12 +3,13 @@
 #include "Traverser.h"
 #include <iostream>
 #include "test_manager.h"
+#include "text_ui.h"
 
 using std::cout;
 using std::endl;
 
 int main() {
-	vector<string> * pInput = getTestInputs("test.txt");
+	/*vector<string> * pInput = getTestInputs("test.txt");
 
 	for (auto i : *pInput) {
 		cout << i << endl;
@@ -21,7 +22,11 @@ int main() {
 		cout << *pName << endl;
 	}
 	
-	TestManager testmanagertest = TestManager("test.txt", "test_folder", "-s");
-	testmanagertest.testCompiler();
-	testmanagertest.test_testinput();
+	TestManager testmanagertest = TestManager("test.txt", "Projects", "-s");
+	testmanagertest.testAllProjects();*/
+	/*testmanagertest.testCompiler();
+	testmanagertest.testAllInputs();*/
+	//testmanagertest.test_testinput();
+
+	runLoop();
 }
