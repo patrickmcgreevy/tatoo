@@ -1,0 +1,4 @@
+testfilename=itest_tests.txt
+projectsfoldername=itest
+speed=-s
+forcecompile=false

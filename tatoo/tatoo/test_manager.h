@@ -17,24 +17,26 @@ class TestManager
 public:
 	TestManager(const string inputName, const string dirName, const string speedMode);
 
-	void testAllProjects();
+	void testAllProjects(); // Test all inputs on all projects in the directory
 	void testCompiler();
 	void test_testinput();
+	void testAllInputs(); // Uses current directory
 private:
 	Traverser traverser;
 	vector<string> *pInput;
 	string speed;
-	string compilerPath = ".\\ClangC2\\bin\\amd64\\clang";
-	string defaultExeName = "proj";
+	bool forceCompile;
+	//string compilerPath = ".\\ClangC2\\bin\\amd64\\clang";
+	string defaultExeName = "proj"; // Hard coded because I'm a scrub
 
 	//void testInput(vector<string>::iterator & rIt);
 	void testProject(const string & rPathName);
-	void testInput(string & rInput, fs::directory_iterator & rDirIt);
+	//void testInput(string & rInput, fs::directory_iterator & rDirIt);
 	void testInput(string & rInput); // Uses the current directory
-	void testAllInputs(const string & rPathName);
+	
 
 	void compileProject(const string & codeDirName, const string & commandLine); // Given the folder name, and the commandline compile message, compile all cpp files into a .exe
-
+	bool projectCompiled(); // Checks that the proj.exe exists in the file
 	/*
 	This is all for making string conversions and interacting with the windows api
 	*/
